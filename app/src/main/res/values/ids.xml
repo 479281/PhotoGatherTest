@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="REQUEST_PERMISSION" type="id"/>
+    <item name="REQUEST_CAMERA" type="id"/>
+    <item name="REQUEST_ALBUM" type="id"/>
+    <item name="REQUEST_SAVE_PHOTO" type="id"/>
+</resources>
