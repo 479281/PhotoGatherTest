@@ -77,14 +77,14 @@ public class PhotoTakerSheetDialog extends BottomSheetDialog implements View.OnC
         switch (requestCode) {
             case REQUEST_CAMERA:
                 path = tempPath;
-                rawCropPath = null;
+                rawCropPath = path;
                 break;
             case REQUEST_ALBUM:
                 //不考虑4.4以下版本
+                rawCropPath = null;
                 if (resultIntent != null) {
                     Uri rawUri = resultIntent.getData();
                     path = handleImage(rawUri);
-                    rawCropPath = path;
                 }
                 break;
             case REQUEST_CROP:
