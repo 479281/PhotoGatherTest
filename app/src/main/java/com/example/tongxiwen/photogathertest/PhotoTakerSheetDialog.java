@@ -24,8 +24,7 @@ import java.io.File;
 
 /**
  * 获取照片底部抽屉
- * TODO 相册获取、相机获取、照片剪裁、照片压缩、照片上传
- * TODO 注意Glide缓存机制的键冲突
+ * 相册获取、相机获取、照片剪裁、照片压缩、照片上传
  */
 public class PhotoTakerSheetDialog extends BottomSheetDialog implements View.OnClickListener {
 
@@ -139,12 +138,12 @@ public class PhotoTakerSheetDialog extends BottomSheetDialog implements View.OnC
         intent.putExtra("aspectX", aspect);
         intent.putExtra("aspectY", aspect);
 
-        intent.putExtra("outputX", 50);  //返回数据的时候的 X 像素大小。
-        intent.putExtra("outputY", 100);  //返回的时候 Y 的像素大小。
+//        intent.putExtra("outputX", 100);  //返回数据的时候的 X 像素大小。
+//        intent.putExtra("outputY", 100);  //返回的时候 Y 的像素大小。
         //以上两个值，设置之后会按照两个值生成一个Bitmap, 两个值就是这个bitmap的横向和纵向的像素值，如果裁剪的图像和这个像素值不符合，那么空白部分以黑色填充。
 
-        intent.putExtra("scale", false);
-//        intent.putExtra("circleCrop", true);
+        intent.putExtra("scale", true);
+//        intent.putExtra("circleCrop", "true"); // 该句会报错，可能和原图 比例有关
         intent.putExtra(MediaStore.EXTRA_OUTPUT, outputUri);
         intent.putExtra("outputFormat", Bitmap.CompressFormat.JPEG.toString());
         intent.putExtra("noFaceDetection", true); // no face detection
@@ -167,7 +166,7 @@ public class PhotoTakerSheetDialog extends BottomSheetDialog implements View.OnC
 
         Intent intent = new Intent("com.android.camera.action.CROP");
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        intent.setDataAndType(imgUri, "image/*");
+        intent.setDataAndType(imgUri, "image/*");   // 输入url和类别
         intent.putExtra("crop", "false");
 
         int aspect = isSquare ? 1 : 0;
