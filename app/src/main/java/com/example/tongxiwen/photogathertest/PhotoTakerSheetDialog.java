@@ -1,11 +1,12 @@
 package com.example.tongxiwen.photogathertest;
 
 import android.app.Activity;
+import android.content.ContentProvider;
+import android.content.ContentResolver;
 import android.content.ContentUris;
-import android.content.ContentValues;
-import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -21,8 +22,6 @@ import android.widget.Button;
 
 import java.io.File;
 
-import static android.app.Activity.RESULT_OK;
-
 /**
  * 获取照片底部抽屉
  * TODO 相册获取、相机获取、照片剪裁、照片压缩、照片上传
@@ -30,16 +29,17 @@ import static android.app.Activity.RESULT_OK;
  */
 public class PhotoTakerSheetDialog extends BottomSheetDialog implements View.OnClickListener {
 
-    private static final int REQUEST_CAMERA = 0x00;
-    private static final int REQUEST_ALBUM = 0x01;
+    public static final int REQUEST_CAMERA = 0x00;
+    public static final int REQUEST_ALBUM = 0x01;
+    public static final int REQUEST_CROP = 0x02;
 
     private Activity mContext;
     private String tempPath;
+    private String rawCropPath;
     private boolean isCrop; // 是否剪裁
     private boolean isNougat;   // 是否为7.0
 
-    private Button btnCamera;
-    private Button btnAlbum;
+    private boolean isSquare = false; // 剪裁区是否固定正方形
 
     public static PhotoTakerSheetDialog get(@NonNull Activity context) {
         return get(context, false);
@@ -61,10 +61,8 @@ public class PhotoTakerSheetDialog extends BottomSheetDialog implements View.OnC
         setContentView(R.layout.photo_taker_sheet_dialog_layout);
         isNougat = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N;
 
-        btnCamera = findViewById(R.id.dialog_camera);
-        btnAlbum = findViewById(R.id.dialog_album);
-        btnCamera.setOnClickListener(this);
-        btnAlbum.setOnClickListener(this);
+        findViewById(R.id.dialog_camera).setOnClickListener(this);
+        findViewById(R.id.dialog_album).setOnClickListener(this);
     }
 
     /**
@@ -75,20 +73,107 @@ public class PhotoTakerSheetDialog extends BottomSheetDialog implements View.OnC
      * @return 图片Uri
      */
     public Uri onResult(int requestCode, Intent resultIntent) {
+        String path = null;
         switch (requestCode) {
             case REQUEST_CAMERA:
-                return Uri.parse(tempPath);
+                path = tempPath;
+                break;
             case REQUEST_ALBUM:
                 //不考虑4.4以下版本
                 if (resultIntent != null) {
                     Uri rawUri = resultIntent.getData();
-                    return Uri.parse(handleImage(rawUri));
+                    path = handleImage(rawUri);
                 }
                 break;
+            case REQUEST_CROP:
+                FileUtil.deleteFileFromPath(rawCropPath);
+                return Uri.parse(tempPath);
             default:
-                return null;
+                path = null;
+                break;
         }
-        return null;
+        if (isCrop) {
+            if (isNougat) {
+                openCropN(path);
+            } else {
+                openCrop(path);
+            }
+            rawCropPath = path;
+            return null;
+        }
+        return Uri.parse(path);
+    }
+
+    /**
+     * 设置剪裁区是否为正方形，默认为false
+     */
+    public void setCropSquare(boolean isSquare){
+        this.isSquare = isSquare;
+    }
+
+    /**
+     * 检查是否剪裁区为正方形
+     */
+    public boolean isCropSquare(){
+        return isSquare;
+    }
+
+//-----------------------------私有方法--------------------------------
+
+    /**
+     * 6.0开启剪裁
+     *
+     * @param path 图片路径
+     */
+    private void openCrop(String path) {
+        int aspect = isSquare ? 1 : 0;
+        tempPath = FileUtil.getCropImgPath();
+        Uri outputUri = Uri.parse(tempPath);
+        Uri imageUri = Uri.parse(path);
+        Intent intent = new Intent("com.android.camera.action.CROP");
+        intent.setDataAndType(imageUri, "image/*");
+        intent.putExtra("crop", "true");
+        intent.putExtra("aspectX", aspect);
+        intent.putExtra("aspectY", aspect);
+        intent.putExtra("scale", false);
+        intent.putExtra("circleCrop", "true");
+        intent.putExtra(MediaStore.EXTRA_OUTPUT, outputUri);
+        intent.putExtra("outputFormat", Bitmap.CompressFormat.JPEG.toString());
+        intent.putExtra("noFaceDetection", true); // no face detection
+        mContext.startActivityForResult(intent,REQUEST_CROP);
+    }
+
+    /**
+     * 7.0开启剪裁
+     *
+     * @param path 图片路径
+     */
+    private void openCropN(String path) {
+        String authorities = mContext. getString(R.string.authorities);
+
+        tempPath = FileUtil.getCropImgPath();
+        Uri outputUri = FileUtil.getImageContentUri(mContext, tempPath);  // 输出路径
+
+        Uri imgUri = FileProvider.getUriForFile(mContext
+                ,authorities, new File(path));  // 输入路径
+
+        Intent intent = new Intent("com.android.camera.action.CROP");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        intent.setDataAndType(imgUri, "image/*");
+        intent.putExtra("crop", "false");
+
+        int aspect = isSquare ? 1 : 0;
+        intent.putExtra("aspectX", aspect);  // 剪裁比例，默认为0即自由比例
+        intent.putExtra("aspectY", aspect);  // 剪裁比例，默认为0即自由比例
+
+//        intent.putExtra("circleCrop", "true");
+
+        intent.putExtra("scale", true);
+        intent.putExtra(MediaStore.EXTRA_OUTPUT, outputUri);    // 输出uri
+        intent.putExtra("outputFormat", Bitmap.CompressFormat.JPEG.toString());
+        intent.putExtra("noFaceDetection", true); // 不要面部识别
+        intent.putExtra("return-data", false);  // 是否返回Bitmap，占用内存
+        mContext.startActivityForResult(intent,REQUEST_CROP);
     }
 
     /**
@@ -116,8 +201,8 @@ public class PhotoTakerSheetDialog extends BottomSheetDialog implements View.OnC
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         intent.putExtra(MediaStore.EXTRA_OUTPUT
                 /*下面这个参数用到了FileProvider的方法获取Uri，是因为7.0对文件权限做了修改*/
-                ,FileProvider.getUriForFile(mContext, "com.example.tongxiwen.photogathertest"
-                        ,new File(tempPath)));
+                , FileProvider.getUriForFile(mContext, "com.example.tongxiwen.photogathertest"
+                        , new File(tempPath)));
         mContext.startActivityForResult(intent, REQUEST_CAMERA);
         Log.d("tempPath:", tempPath);
     }
@@ -179,32 +264,11 @@ public class PhotoTakerSheetDialog extends BottomSheetDialog implements View.OnC
         return path;
     }
 
-    /**
-     * 对7.0的文件操作权限问题做了适配，因此通过该方法获取相机的临时存储uri
-     *
-     * @deprecated 实际上并没有用的上。。。
-     * @return 存储Uri
-     */
-    private Uri getSaveUri() {
-        File file = new File(tempPath);
-        Uri imageUri = null;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            //若为7.0系统，则需适配内容提供者和权限
-
-            //添加这一句表示对目标应用临时授权该Uri所代表的文件
-            imageUri = FileProvider.getUriForFile(mContext
-                    , "com.example.tongxiwen.photogathertest", file);
-
-            //创建并添加到内容提供者里
-            ContentValues contentValues = new ContentValues(1);
-            contentValues.put(MediaStore.Images.Media.DATA, file.getAbsolutePath());
-            imageUri = mContext.getContentResolver()
-                    .insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues);
-        } else {
-            imageUri = Uri.fromFile(file);
-        }
-        return imageUri;
-    }
+//    @Override
+//    public void onDetachedFromWindow() {
+//        super.onDetachedFromWindow();
+//        FileUtil.clearImgCacheDir(mContext);
+//    }
 
     /**
      * 点击事件

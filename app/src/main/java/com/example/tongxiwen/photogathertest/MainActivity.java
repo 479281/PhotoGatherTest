@@ -31,6 +31,7 @@ public class MainActivity extends FoxActivity implements View.OnClickListener {
     @Override
     protected void create(@Nullable Bundle savedInstanceState) {
         view = findViewById(R.id.image_field);
+        dialog = PhotoTakerSheetDialog.get(this, true);
         findViewById(R.id.button1).setOnClickListener(this);
         findViewById(R.id.button2).setOnClickListener(this);
 
@@ -41,7 +42,7 @@ public class MainActivity extends FoxActivity implements View.OnClickListener {
 
         view.setImageResource(R.mipmap.ic_launcher);
 
-        dialog = PhotoTakerSheetDialog.get(this);
+        dialog.setCropSquare(false);    // 不要固定比例的正方形剪裁
     }
 
     @Override
@@ -75,7 +76,7 @@ public class MainActivity extends FoxActivity implements View.OnClickListener {
         Uri uri = null;
         if (resultCode == RESULT_OK)
             uri = dialog.onResult(requestCode, data);
-        if (uri != null)
+        if (uri != null && requestCode == PhotoTakerSheetDialog.REQUEST_CROP)
             view.setImageURI(uri);
     }
 
@@ -87,6 +88,7 @@ public class MainActivity extends FoxActivity implements View.OnClickListener {
                 break;
             case R.id.button2:
                 FileUtil.clearImgCacheDir(MainActivity.this);
+                FileUtil.clearCropImgDir();
                 break;
             default:
                 break;
