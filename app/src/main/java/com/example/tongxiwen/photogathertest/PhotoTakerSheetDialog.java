@@ -77,16 +77,20 @@ public class PhotoTakerSheetDialog extends BottomSheetDialog implements View.OnC
         switch (requestCode) {
             case REQUEST_CAMERA:
                 path = tempPath;
+                rawCropPath = null;
                 break;
             case REQUEST_ALBUM:
                 //不考虑4.4以下版本
                 if (resultIntent != null) {
                     Uri rawUri = resultIntent.getData();
                     path = handleImage(rawUri);
+                    rawCropPath = path;
                 }
                 break;
             case REQUEST_CROP:
-                FileUtil.deleteFileFromPath(rawCropPath);
+                if (!TextUtils.isEmpty(rawCropPath))
+                    FileUtil.deleteFileFromPath(rawCropPath);
+                rawCropPath = null;
                 return Uri.parse(tempPath);
             default:
                 path = null;
@@ -98,7 +102,6 @@ public class PhotoTakerSheetDialog extends BottomSheetDialog implements View.OnC
             } else {
                 openCrop(path);
             }
-            rawCropPath = path;
             return null;
         }
         return Uri.parse(path);
@@ -107,14 +110,14 @@ public class PhotoTakerSheetDialog extends BottomSheetDialog implements View.OnC
     /**
      * 设置剪裁区是否为正方形，默认为false
      */
-    public void setCropSquare(boolean isSquare){
+    public void setCropSquare(boolean isSquare) {
         this.isSquare = isSquare;
     }
 
     /**
      * 检查是否剪裁区为正方形
      */
-    public boolean isCropSquare(){
+    public boolean isCropSquare() {
         return isSquare;
     }
 
@@ -135,12 +138,17 @@ public class PhotoTakerSheetDialog extends BottomSheetDialog implements View.OnC
         intent.putExtra("crop", "true");
         intent.putExtra("aspectX", aspect);
         intent.putExtra("aspectY", aspect);
+
+        intent.putExtra("outputX", 50);  //返回数据的时候的 X 像素大小。
+        intent.putExtra("outputY", 100);  //返回的时候 Y 的像素大小。
+        //以上两个值，设置之后会按照两个值生成一个Bitmap, 两个值就是这个bitmap的横向和纵向的像素值，如果裁剪的图像和这个像素值不符合，那么空白部分以黑色填充。
+
         intent.putExtra("scale", false);
-        intent.putExtra("circleCrop", "true");
+//        intent.putExtra("circleCrop", true);
         intent.putExtra(MediaStore.EXTRA_OUTPUT, outputUri);
         intent.putExtra("outputFormat", Bitmap.CompressFormat.JPEG.toString());
         intent.putExtra("noFaceDetection", true); // no face detection
-        mContext.startActivityForResult(intent,REQUEST_CROP);
+        mContext.startActivityForResult(intent, REQUEST_CROP);
     }
 
     /**
@@ -149,13 +157,13 @@ public class PhotoTakerSheetDialog extends BottomSheetDialog implements View.OnC
      * @param path 图片路径
      */
     private void openCropN(String path) {
-        String authorities = mContext. getString(R.string.authorities);
+        String authorities = mContext.getString(R.string.authorities);
 
         tempPath = FileUtil.getCropImgPath();
         Uri outputUri = FileUtil.getImageContentUri(mContext, tempPath);  // 输出路径
 
         Uri imgUri = FileProvider.getUriForFile(mContext
-                ,authorities, new File(path));  // 输入路径
+                , authorities, new File(path));  // 输入路径
 
         Intent intent = new Intent("com.android.camera.action.CROP");
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
@@ -173,7 +181,7 @@ public class PhotoTakerSheetDialog extends BottomSheetDialog implements View.OnC
         intent.putExtra("outputFormat", Bitmap.CompressFormat.JPEG.toString());
         intent.putExtra("noFaceDetection", true); // 不要面部识别
         intent.putExtra("return-data", false);  // 是否返回Bitmap，占用内存
-        mContext.startActivityForResult(intent,REQUEST_CROP);
+        mContext.startActivityForResult(intent, REQUEST_CROP);
     }
 
     /**
