@@ -46,7 +46,7 @@ public class FileUtil {
         try {
             long curTime = System.currentTimeMillis();
             String curTimeStr = (String) DateFormat.format("yyyy-MM-dd-hh:mm:ss", curTime);
-            path = getCropImgDir() + "/" + curTimeStr + ".png";
+            path = getCropImgDir() + "/" + curTimeStr + ".jpg";
             File file = new File(path);
             if (file.exists())
                 file.delete();
@@ -68,7 +68,7 @@ public class FileUtil {
         String path = getOuterStoragePath() + "/剪切图";
         File file = new File(path);
         if (file.exists()) {
-            if (file.isDirectory()) {
+            if (!file.isDirectory()) {
                 file.delete();
             }
         } else
@@ -218,7 +218,7 @@ public class FileUtil {
         path += OUTER_MAIN_PATH;
         File file = new File(path);
         if (file.exists()) {
-            if (file.isDirectory()) {
+            if (!file.isDirectory()) {
                 file.delete();
             }
         } else

@@ -167,7 +167,7 @@ public class PhotoTakerSheetDialog extends BottomSheetDialog implements View.OnC
         Intent intent = new Intent("com.android.camera.action.CROP");
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         intent.setDataAndType(imgUri, "image/*");   // 输入url和类别
-        intent.putExtra("crop", "false");
+        intent.putExtra("crop", "true");
 
         int aspect = isSquare ? 1 : 0;
         intent.putExtra("aspectX", aspect);  // 剪裁比例，默认为0即自由比例

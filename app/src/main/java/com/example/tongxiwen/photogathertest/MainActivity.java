@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.support.annotation.Nullable;
@@ -13,7 +14,6 @@ import android.view.View;
 import android.widget.ImageView;
 
 import java.io.File;
-import java.net.URI;
 import java.util.List;
 
 public class MainActivity extends FoxActivity implements View.OnClickListener {
@@ -76,8 +76,15 @@ public class MainActivity extends FoxActivity implements View.OnClickListener {
         Uri uri = null;
         if (resultCode == RESULT_OK)
             uri = dialog.onResult(requestCode, data);
-        if (uri != null && requestCode == PhotoTakerSheetDialog.REQUEST_CROP)
-            view.setImageURI(uri);
+//        if (uri != null && requestCode == PhotoTakerSheetDialog.REQUEST_CROP) {
+//            view.setImageURI(uri);
+//        }
+
+        if (uri != null && requestCode == PhotoTakerSheetDialog.REQUEST_CROP) {
+            String path = uri.toString();
+            Bitmap bitmap = BitmapUtil.getBitmapFromFile(new File(path));
+            view.setImageBitmap(bitmap);
+        }
     }
 
     @Override
